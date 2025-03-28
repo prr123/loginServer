@@ -43,11 +43,18 @@ func main() {
 
 		switch cmd {
 		case "chk":
+			if n!=3 {
+				fmt.Printf("incorrect args!\n")
+				goto loop
+			}
+			msg ="chk " + inpList[1] + ":" + inpList[2]
+
+		case "get":
 			if n!=2 {
 				fmt.Printf("incorrect args!\n")
 				goto loop
 			}
-			msg = "chk " + inpList[1]
+			msg = "get " + inpList[1]
 
 		case "add":
 			if n!=3 {
