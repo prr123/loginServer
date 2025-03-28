@@ -86,7 +86,7 @@ func dbHandler(conn net.Conn, db *pgdb.DB, fini chan struct{}, wg sync.WaitGroup
 
 		msg, err := fn(buf[3:n], db)
 		if err != nil {
-			errmsg := fmt.Sprintf("error -- cannot get msg for cmd %s: %v\n", cmd, err)
+			errmsg := fmt.Sprintf("error -- no msg for cmd %s: %v\n", cmd, err)
 			SendErrMsg(conn, errmsg)
 		}
 		fmt.Printf("dbg -- msg [%d]: %s\n",len(msg), msg)
@@ -121,9 +121,23 @@ func SendErrMsg(conn net.Conn, errmsg string) {
 
 func dbcheck(inp []byte, db *pgdb.DB) (out []byte, err error) {
 	fmt.Printf("dbg -- dbcheck: %s\n", inp)
+	idx:= bytes.IndexByte(inp, ':')
+	if idx == -1 {return out, fmt.Errorf("inp has no colon!")}
+fmt.Printf("add %s %s\n",inp[:idx], inp[idx+1:])
+	val, err := db.Get(inp[:idx])
+	if err != nil {return out, fmt.Errorf("db read: %v", err)}
+	if val == nil {return nil, fmt.Errorf("db invalid key!")}
+	log.Printf("read key: %s val: %s", inp, val)
+	if bytes.Equal(val, inp[idx+1:]) {return []byte("ok"), nil}
+	return []byte("no match"), nil
+}
+
+func dbget(inp []byte, db *pgdb.DB) (out []byte, err error) {
+	fmt.Printf("dbg -- dbcheck: %s\n", inp)
 	val, err := db.Get(inp)
 	if err != nil {return out, fmt.Errorf("db read: %v", err)}
-	log.Printf("read key: %s val: %s", inp, val)
+	if val == nil {return nil, fmt.Errorf("db invalid key!")}
+	fmt.Printf("dbg -- read key: %s val: %s", inp, val)
 	return val, nil
 }
 
@@ -201,6 +215,7 @@ func main() {
 	}
 
 	hmap["chk"] = dbcheck
+	hmap["get"] = dbget
 	hmap["lis"] = dblist
 	hmap["add"] = dbadd
 	hmap["upd"] = dbupd
